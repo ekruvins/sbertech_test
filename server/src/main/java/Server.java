@@ -1,27 +1,32 @@
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Server {
     final static Logger logger = Logger.getLogger(Server.class);
-    public static void main(String[] args) throws IOException {
-        try{
+    static SimpleDateFormat  dateFormat= new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+    public static void main(String[] args) throws IOException, JAXBException {
+        try {
             int serverPort = 5000;
             ServerSocket serverSocket = new ServerSocket(serverPort);
             while (true) {
                 Socket server = serverSocket.accept();
-                BufferedReader fromClient = new BufferedReader(new InputStreamReader(server.getInputStream()));
-                String line = fromClient.readLine();
-                PrintWriter toClient = new PrintWriter(server.getOutputStream(), true);
-                System.out.println(line);
-                toClient.println("Thank you for connecting to " + server.getLocalSocketAddress() + " Goodbye!");
+                File file = parseRequestXml(server);
+                Request request = getRequsetFromFile(file);
+                System.out.println(request.getMessage());
+                Response response = generateResponseMessage(request);
+                File responseFile = generateXMLResponse(response);
+
             }
         } catch (UnknownHostException ex) {
             ex.printStackTrace();
@@ -37,4 +42,55 @@ public class Server {
             }
         }
     }
+
+    private static File generateXMLResponse(Response response) throws JAXBException {
+        JAXBContext context = JAXBContext.newInstance(Response.class);
+        File responseFile = new File("response.xml");
+        Marshaller marshaller = context.createMarshaller();
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+        marshaller.marshal(response, responseFile);
+        return responseFile;
+    }
+
+    private static Response generateResponseMessage(Request request) {
+        logger.debug("User with name: "+request.getName()+" was register");
+        logger.debug("User with name: "+request.getName()+" send message: "+request.getMessage());
+        Response response = new Response();
+        response.setMessage("Добрый день, "+request.getName()+", Ваше сообщение успешно обработано!");
+        response.setDate(dateFormat.format(new Date(System.currentTimeMillis())));
+        return response;
+
+    }
+
+
+
+    private static Request getRequsetFromFile(File file) throws JAXBException {
+        JAXBContext jc = JAXBContext.newInstance(Request.class);
+        Unmarshaller unmarshaller = jc.createUnmarshaller();
+        return (Request) unmarshaller.unmarshal(file);
+
+    }
+
+    private static File parseRequestXml(Socket server) throws IOException {
+        byte[] bytearray = new byte[8000];
+        InputStream is = server.getInputStream();
+        File copyFileName = new File("output.xml");
+        FileOutputStream fos = new FileOutputStream(copyFileName);
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+        int bytesRead = is.read(bytearray, 0, bytearray.length);
+        int currentTot = bytesRead;
+        do {
+            bytesRead = is.read(bytearray, currentTot, (bytearray.length - currentTot));
+            if (bytesRead >= 0)
+                currentTot += bytesRead;
+        } while (bytesRead > -1);
+        bos.write(bytearray, 0, currentTot);
+        bos.flush();
+        bos.close();
+        return copyFileName;
+
+    }
+
 }
+
+
