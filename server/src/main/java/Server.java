@@ -78,6 +78,7 @@ public class Server {
     private static File parseRequestXml(Socket server) throws IOException {
         // берём поток входяших данных
         // создаём буффер данных, определяем файл, записываем байты в файл
+        // читаем пока не встретим -1(конец потока)
         // выводим данные, заканчиваем передачу, закрываем соединение
         InputStream is = server.getInputStream();
         byte[] bytearray = new byte[8000];
