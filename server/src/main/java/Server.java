@@ -1,5 +1,4 @@
 import org.apache.log4j.Logger;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -13,11 +12,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Server {
+    // Инициализация логера
     final static Logger logger = Logger.getLogger(Server.class);
     static SimpleDateFormat  dateFormat= new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+
     public static void main(String[] args) throws IOException, JAXBException {
         try {
             int serverPort = 5000;
+            // создаём сокет и привязываем его к порту
             ServerSocket serverSocket = new ServerSocket(serverPort);
             while (true) {
                 Socket server = serverSocket.accept();
@@ -28,6 +30,7 @@ public class Server {
                 File responseFile = generateXMLResponse(response);
 
             }
+        // обработка исключений
         } catch (UnknownHostException ex) {
             ex.printStackTrace();
         } catch (IOException e) {
@@ -43,28 +46,29 @@ public class Server {
         }
     }
 
-    private static File generateXMLResponse(Response response) throws JAXBException {
-        JAXBContext context = JAXBContext.newInstance(Response.class);
-        File responseFile = new File("response.xml");
-        Marshaller marshaller = context.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.marshal(response, responseFile);
-        return responseFile;
-    }
-
     private static Response generateResponseMessage(Request request) {
-        logger.debug("User with name: "+request.getName()+" was register");
-        logger.debug("User with name: "+request.getName()+" send message: "+request.getMessage());
+        // пишем необходимую информацию в логере
+        // для объкта response класса Response вызываем методы
+        logger.debug("User with name: " + request.getName() + " was register");
+        logger.debug("User with name: " + request.getName() + " send message: " + request.getMessage());
         Response response = new Response();
-        response.setMessage("Добрый день, "+request.getName()+", Ваше сообщение успешно обработано!");
+        response.setMessage("Добрый день, " + request.getName() + ", Ваше сообщение успешно обработано!");
         response.setDate(dateFormat.format(new Date(System.currentTimeMillis())));
         return response;
 
     }
-
-
+    private static File generateXMLResponse(Response response) throws JAXBException {
+        // преобразование объект класса Response в xml файл(response.xml)
+        JAXBContext context = JAXBContext.newInstance(Response.class);
+        Marshaller marshaller = context.createMarshaller();
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+        File responseFile = new File("response.xml");
+        marshaller.marshal(response, responseFile);
+        return responseFile;
+    }
 
     private static Request getRequsetFromFile(File file) throws JAXBException {
+        // преобразуем файл в объект класса Request
         JAXBContext jc = JAXBContext.newInstance(Request.class);
         Unmarshaller unmarshaller = jc.createUnmarshaller();
         return (Request) unmarshaller.unmarshal(file);
@@ -72,8 +76,11 @@ public class Server {
     }
 
     private static File parseRequestXml(Socket server) throws IOException {
-        byte[] bytearray = new byte[8000];
+        // берём поток входяших данных
+        // создаём буффер данных, определяем файл, записываем байты в файл
+        // выводим данные, заканчиваем передачу, закрываем соединение
         InputStream is = server.getInputStream();
+        byte[] bytearray = new byte[8000];
         File copyFileName = new File("output.xml");
         FileOutputStream fos = new FileOutputStream(copyFileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
